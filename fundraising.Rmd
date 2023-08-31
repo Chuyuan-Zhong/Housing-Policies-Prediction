@@ -1,0 +1,250 @@
+---
+title: "Untitled"
+author: "Chuyuan Zhong"
+date: "2023-07-18"
+output: html_document
+---
+```{r}
+df <- read.csv('/Users/Chuyuan/Downloads/fundraising.csv')
+head(df)
+dim(df)
+```
+
+```{r}
+library(ggplot2)
+
+total_capital_per_year <- aggregate(AGGREGATE.CAPITAL.RAISED..USD.BN. ~ YEAR, data = df, sum)
+
+# Merge the total capital raised with the original data frame
+df <- merge(df, total_capital_per_year, by = "YEAR", suffixes = c("", "_TOTAL"))
+
+# Calculate the proportion of each region for each year
+df$Proportion <- round(df$AGGREGATE.CAPITAL.RAISED..USD.BN. / df$AGGREGATE.CAPITAL.RAISED..USD.BN._TOTAL,2)
+```
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+ggplot(df, aes(x = YEAR, y = AGGREGATE.CAPITAL.RAISED..USD.BN., fill = Region)) +
+  geom_bar(position = "fill", stat = "identity") +
+  geom_text(aes(label = paste0(round(Proportion * 100, 1), "%")), 
+            position = position_fill(vjust = 0.5), color = "white", size = 1.2) +
+  labs(title = "Proportion of Aggregate Capital Raised in Different Regions Each Year",
+       x = "Year", y = "Raised Capital (bn)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_fill_brewer(palette = "Set2")
+```
+
+```{r}
+total_capital_per_year
+```
+
+```{r}
+library(scales)  # Load the scales library for sec_axis
+
+# Aggregate the total capital raised and total number of funds by year
+total_capital_per_year <- df %>%
+  group_by(YEAR) %>%
+  summarize(Total_Capital_Raised = sum(AGGREGATE.CAPITAL.RAISED..USD.BN.),
+            Total_Number_of_Funds = n_distinct(NO..OF.FUNDS))
+
+# Merge the total capital and total number of funds per year back to the original data frame
+df <- merge(df, total_capital_per_year, by = "YEAR", suffixes = c("", "_TOTAL"))
+
+# Calculate the proportion
+df$Proportion <- df$AGGREGATE.CAPITAL.RAISED..USD.BN. / df$Total_Capital_Raised
+
+```
+
+```{r}
+total_funds <- df %>%
+  group_by(YEAR) %>%
+  summarize(Total_Funds = sum(NO..OF.FUNDS))
+```
+
+```{r}
+# Create the stacked bar chart using ggplot2 with position = "stack"
+plot <- ggplot(df, aes(x = factor(YEAR), y = AGGREGATE.CAPITAL.RAISED..USD.BN., fill = Region)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = paste0(round(100 * Proportion, 1), "%")), position = position_stack(vjust = 0.5), size = 2) +
+  labs(title = "Capital Raised and Number of Funds in Different Regions Each Year",
+       x = "Year",
+       y = "Capital Raised (USD Billion)",
+       fill = "Region") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10, hjust = 0.5),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 7)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_fill_brewer(palette = "Set2") 
+
+ggsave("fundraising.png", plot = plot, bg = "white", width = 1000, height = 800, units = "px", scale = 2.5)
+```
+
+```{r}
+# Plot the graph
+# Step 1: Calculate the Total_Funds using group_by and summarize
+total_funds <- df %>%
+  group_by(YEAR) %>%
+  summarize(Total_Capital_Raised = sum(AGGREGATE.CAPITAL.RAISED..USD.BN.),
+            Total_Number_of_Funds = n_distinct(NO..OF.FUNDS))
+```
+
+```{r}
+# Step 2: Create the combined plot
+ggplot(data = df, aes(x = factor(YEAR), fill = Region)) +
+  # Bar chart for Total Capital Raised
+  geom_bar(aes(y = AGGREGATE.CAPITAL.RAISED..USD.BN.), stat = "identity", position = "stack") +
+  geom_text(aes(y = AGGREGATE.CAPITAL.RAISED..USD.BN., label = paste0(round(100 * Proportion, 1), "%")), 
+            position = position_stack(vjust = 0.5), size =2 ) +
+  labs(y = "Total Capital Raised (USD BN)", fill = "Region") +
+  scale_y_continuous(name = "Total Capital Raised (USD BN)", sec.axis = sec_axis(~., name = "Total Number of Funds")) 
+```
+```{r} 
+  # Line chart for Total Number of Funds (using the secondary y-axis)
+# Assuming your data is stored in the 'df' data frame with columns "YEAR", "Region", and "Raised_Capital"
+
+
+
+# Create the line plot
+plot1<- ggplot(data = df, aes(x = YEAR, y = AGGREGATE.CAPITAL.RAISED..USD.BN., group = Region, color = Region)) +
+  geom_line() +
+  labs(title = "Trend of Raised Capital Across Years for Different Regions",
+       x = "Year",
+       y = "Raised Capital (bn)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10, hjust = 0.5),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 7)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+ggsave("fundraising trend.png", plot = plot1, bg = "white", width = 1000, height = 800, units = "px", scale = 2)
+
+```
+
+```{r}
++
+  geom_text(df, aes(label = paste0(round(100*Proportion, 1), "%")), position = position_stack(vjust = 0.5), size = 2) +
+  geom_line(data = total_funds, aes(x = factor(YEAR), y = Total_Funds, group = 1), color = "blue") +
+  geom_line(data = total_funds, aes(x = factor(YEAR), y = Total_Funds, group = 1), color = "blue") 
++
+  scale_y_continuous(sec.axis = sec_axis(~., name = "Total Number of Funds")) +
+  
+  labs(title = "Capital Raised in Different Regions Each Year",
+       x = "Year",
+       y = "Capital Raised (USD Billion)",
+       fill = "Region") +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 10, hjust=0.5),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 7))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_fill_brewer(palette = "Set2")
+df
+```
+
+```{r}
+# Calculate total number of funds each year
+total_funds <- df %>%
+  group_by(YEAR) %>%
+  summarize(Total_Funds = sum(NO..OF.FUNDS))
+total_funds
+```
+
+```{r}
+library(readxl)
+df1 <- read_excel('/Users/Chuyuan/Downloads/deal.xlsx')
+str(df1)
+head(df1)
+```
+
+
+```{r}
+df1 <- read.csv('/Users/Chuyuan/Downloads/deal1.csv')
+# Assuming your data frame is named df1
+any(is.na(df1$AGGREGATE.DEAL.VALUE..USD.Bn.))
+```
+
+```{r}
+df1
+
+```
+
+```{r}
+ggplot(df1, aes(x = YEAR)) +
+  # Line plot for number of deals
+  geom_line(aes(y = NUMBER.OF.DEALS..aggregated., group = 1), color = "blue", position = "identity") +
+  # Histogram for aggregate deal values
+  geom_col(aes(y = AGGREGATE.DEAL.VALUE..USD.Bn., fill = "Deal Value"), alpha = 0.5, position = "dodge") +
+  # Set the y-axis labels
+  ylab("Number of Deals") +
+  scale_y_continuous(sec.axis = sec_axis(~. * 1600, name = "Aggregate Deal Value (USD Bn)", labels = scales::comma_format(scale = 1 / 1600))) +
+  # Set the x-axis label
+  xlab("Year") +
+  # Set the plot title
+  ggtitle("Number of Deals and Aggregate Deal Value by Year") +
+  # Customize the appearance of the bars
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  # Customize the legend
+  guides(fill = guide_legend(title = "Deal Type"))
+
+
+```
+
+
+```{r}
+ggplot(df1, aes(x = YEAR)) +
+  # Line plot for number of deals
+  geom_line(aes(y = NUMBER.OF.DEALS..aggregated., group = 1), color = "blue") +
+  # Histogram for aggregate deal values
+  geom_bar(aes(y = AGGREGATE.DEAL.VALUE..USD.Bn., fill = "Deal Value"), stat = "identity", alpha = 0.5, position = "dodge") +
+  # Set the y-axis labels and ranges
+  ylab("Number of Deals") +
+  scale_y_continuous(breaks = seq(0, 16000, by = 4000),
+                     labels = c("0", "4,000", "8,000", "12,000", "16,000"),
+                     sec.axis = sec_axis(~. / 10, breaks = seq(0, 1600, by = 400),
+                                         labels = c("0", "400", "800", "1200", "1600"),
+                                         name = "Aggregate Deal Value (USD Bn)")) +
+  # Set the x-axis label
+  xlab("Year") +
+  # Set the plot title
+  ggtitle("Number of Deals and Aggregate Deal Value by Year") +
+  # Customize the appearance of the histogram bars
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  # Customize the legend
+  guides(fill = guide_legend(title = "Deal Type"))
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+```{r}
+
+```
